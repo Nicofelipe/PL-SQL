@@ -1,0 +1,160 @@
+SELECT * FROM EMPLEADO;
+SELECT * FROM CATEGORIA_EMPLEADO;
+
+--PERMITE VER LO EJECUTADO EN CONSOLA Y NO EN EL DBMS
+SET SERVEROUTPUT ON; 
+
+---------------------------------------------------------------------------CASO1
+
+VAR B_RUT VARCHAR2(10)
+EXEC :B_RUT := '&INGRESE_RUT_CON_DV';
+
+
+DECLARE
+V_NOMBRE VARCHAR2(70);
+V_RUT    VARCHAR2(12);
+V_SUELDO NUMERIC;
+V_BONO NUMBER(2):= 40;
+V_BE NUMERIC;
+
+BEGIN
+
+    SELECT
+        NOMBRE_EMP||' '||APPATERNO_EMP||' '||APMATERNO_EMP "NOMBRE",
+        NUMRUT_EMP||'-'||DVRUT_EMP "RUT",
+        SUELDO_EMP "SUELDO"
+       INTO V_NOMBRE,V_RUT,V_SUELDO
+    FROM EMPLEADO
+    WHERE SUELDO_EMP < 500000
+    AND NUMRUT_EMP||'-'||DVRUT_EMP = :B_RUT
+    AND ID_CATEGORIA_EMP NOT IN 3;
+    
+V_BE := ROUND(V_SUELDO*(V_BONO/100));
+    
+        DBMS_OUTPUT.PUT_LINE('DATOS CALCULO BONIFICACION EXTRA DEL '||V_BONO|| % DEL SUELDO');
+        DBMS_OUTPUT.PUT_LINE('Nombre Empleado: '||V_NOMBRE);
+        DBMS_OUTPUT.PUT_LINE('RUN: '||V_RUT);
+        DBMS_OUTPUT.PUT_LINE('Sueldo: '||V_SUELDO);
+        DBMS_OUTPUT.PUT_LINE('Bonificación extra: '||V_BE);
+END;
+
+------------------RUT A INGRESAR (INGRESARLOS CON DV PERO SIN GUION)
+-- RUT 11846972-5
+-- RUT 18560875-5
+
+
+
+
+
+/
+
+------------------------------------CASO 2--------------------------------------
+/
+
+VAR B_RUT VARCHAR2(10)
+EXEC :B_RUT := '&INGRESE_RUT_CON_DV';
+
+DECLARE 
+V_NOMBRE VARCHAR2(70);
+V_RUT VARCHAR2(20);
+V_ECIVIL VARCHAR2 (30);
+V_RENTA NUMBER;
+BEGIN
+    SELECT
+        C.NOMBRE_CLI||' '||C.APPATERNO_CLI||' '||C.APMATERNO_CLI "NOMBRE" ,
+        C.NUMRUT_CLI||'-'||C.DVRUT_CLI "RUT",
+        EC.DESC_ESTCIVIL "ESTADO_CIVIL",
+        C.RENTA_CLI  "RENTA"
+        INTO V_NOMBRE,V_RUT,V_ECIVIL,V_RENTA
+    FROM CLIENTE C JOIN ESTADO_CIVIL EC
+    ON C.ID_ESTCIVIL = EC.ID_ESTCIVIL
+    AND EC.DESC_ESTCIVIL IN ('Soltero','Separado','Divorciado')
+    AND C.NUMRUT_CLI||'-'||C.DVRUT_CLI = :B_RUT;
+    
+    IF(V_ECIVIL IN ('Separado','Divorciado') AND V_RENTA >= 800000) THEN
+        DBMS_OUTPUT.PUT_LINE('DATOS DEL CLIENTE');
+        DBMS_OUTPUT.PUT_LINE('-----------------');
+        DBMS_OUTPUT.PUT_LINE('Nombre : '||V_NOMBRE);
+        DBMS_OUTPUT.PUT_LINE('RUN: '||V_RUT);
+        DBMS_OUTPUT.PUT_LINE('Estado civil: '||V_ECIVIL);
+        DBMS_OUTPUT.PUT_LINE('Renta: '||TRIM(TO_CHAR(V_RENTA,'L999G999G999')));
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('DATOS DEL CLIENTE');
+        DBMS_OUTPUT.PUT_LINE('-----------------');
+        DBMS_OUTPUT.PUT_LINE('Nombre : '||V_NOMBRE);
+        DBMS_OUTPUT.PUT_LINE('RUN: '||V_RUT);
+        DBMS_OUTPUT.PUT_LINE('Estado civil: '||V_ECIVIL);
+        DBMS_OUTPUT.PUT_LINE('Renta: '||TRIM(TO_CHAR(V_RENTA,'L999G999G999')));
+    END IF;     
+END;
+/
+
+--RUT : 12487147-9
+--RUT : 12861354-3
+--RUT : 13050258-0
+
+
+
+
+--------------------------------------------------------------------------------CASO 3
+--SET SERVEROUTPUT ON;
+
+
+/
+VAR B_RUT VARCHAR2(10)
+EXEC :B_RUT := '&INGRESE_RUT_CON_DV';
+
+
+DECLARE
+
+V_NAME VARCHAR2(70);
+V_RUTEMP VARCHAR2(12);
+V_SALARY NUMERIC;
+V_REAJUSTE1 NUMERIC(2,1):= &REAJUSTE_1;
+V_REAJUSTE2 NUMBER(2):= &REAJUSTE_2;
+V_SR1 NUMBER ;
+V_SR2 NUMBER;
+V_R1 NUMBER;
+V_R2 NUMBER;
+
+BEGIN
+    SELECT
+        NOMBRE_EMP||' '||APPATERNO_EMP||' '||APMATERNO_EMP AS NEIM,
+        NUMRUT_EMP||'-'||DVRUT_EMP AS RUN,
+        SUELDO_EMP AS SUELDO
+        INTO V_NAME,V_RUTEMP,V_SALARY
+        FROM EMPLEADO
+        WHERE NUMRUT_EMP||'-'||DVRUT_EMP  = :B_RUT;
+    V_SR1 := ROUND(V_SALARY*(1+(V_REAJUSTE1/100)));
+    V_SR2 := ROUND(V_SALARY*(1+(V_REAJUSTE2/100)));
+    V_R1  := ROUND(V_SALARY*(V_REAJUSTE1/100));
+    V_R2  := ROUND(V_SALARY*(V_REAJUSTE2/100));
+    
+    
+        IF(V_SALARY >= 200000 AND V_SALARY <= 400000) THEN
+            DBMS_OUTPUT.PUT_LINE('Nombre del empleado: '||V_NAME);
+            DBMS_OUTPUT.PUT_LINE('Run: '||V_RUTEMP);
+            DBMS_OUTPUT.PUT_LINE('SIMULACION: aumentar en '||V_REAJUSTE1||'% el salario de todos los empleados');
+            DBMS_OUTPUT.PUT_LINE('Sueldo actual: '||V_SALARY);
+            DBMS_OUTPUT.PUT_LINE('Sueldo reajustado: '||V_SR1);
+            DBMS_OUTPUT.PUT_LINE('Reajuste: '||V_R1);
+            DBMS_OUTPUT.PUT_LINE('SIMULACION: aumentar en '||V_REAJUSTE2||'% el salario de todos los empleados');
+            DBMS_OUTPUT.PUT_LINE('Sueldo actual:' ||V_SALARY);
+            DBMS_OUTPUT.PUT_LINE('Sueldo reajustado: '||V_SR2);
+            DBMS_OUTPUT.PUT_LINE('Reajuste:'||V_R2);
+        ELSE
+            DBMS_OUTPUT.PUT_LINE('Nombre del empleado: '||V_NAME);
+            DBMS_OUTPUT.PUT_LINE('Run: '||V_RUTEMP);
+            DBMS_OUTPUT.PUT_LINE('SIMULACION: aumentar en '||V_REAJUSTE1||'% el salario de todos los empleados');
+            DBMS_OUTPUT.PUT_LINE('Sueldo actual: '||V_SALARY);
+            DBMS_OUTPUT.PUT_LINE('Sueldo reajustado: '||V_R1);
+            DBMS_OUTPUT.PUT_LINE('Reajuste: '||V_R1);            
+        END IF;
+END;
+
+
+------------------RUT A CONSULTAR
+--12260812-0
+--11999100-4
+
+
