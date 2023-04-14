@@ -1,0 +1,222 @@
+SELECT * FROM CLIENTE;
+SELECT * FROM TIPO_CLIENTE;
+SELECT * FROM CREDITO_CLIENTE;
+SELECT * FROM CLIENTE_TODOSUMA;
+---------------------------------------------------------------------------CASO1
+
+--------------RUT A EJECUTAR
+--21242003
+--22176845
+--18858542
+--21300628
+--22558061
+/
+
+DECLARE
+V_NRO_CLI CLIENTE.NRO_CLIENTE%TYPE;
+V_RUN_CLI VARCHAR2(14);
+V_NOMBRE_CLI VARCHAR2(100);
+V_NOM_TIPO_CLI TIPO_CLIENTE.NOMBRE_TIPO_CLIENTE%TYPE;
+V_MONTO_SOLI_CLI CREDITO_CLIENTE.MONTO_SOLICITADO%TYPE;
+V_PESOS_TODOSUMA NUMBER(8);
+
+BEGIN
+
+SELECT
+    C.nro_cliente "NRO_CLIENTE",
+    TO_CHAR(C.numrun,'999G999G999')||'-'||C.dvrun "RUN_CLIENTE",
+    C.pnombre||' '||NVL(C.snombre,'')||' '||C.appaterno||' '||C.apmaterno "NOMBRE",
+    TC.nombre_tipo_cliente "TIPO CLIENTE",
+    /*NVL(*/SUM(CC.monto_solicitado)/*,0)*/"MONTO SOLICITADO"  
+    INTO V_NRO_CLI,V_RUN_CLI,V_NOMBRE_CLI,V_NOM_TIPO_CLI,V_MONTO_SOLI_CLI
+FROM CLIENTE C  JOIN TIPO_CLIENTE TC
+ON C.cod_tipo_cliente = TC.cod_tipo_cliente
+/*LEFT*/ JOIN CREDITO_CLIENTE CC
+ON C.nro_cliente = CC.nro_cliente
+AND C.numrun = &INGRESE_RUT
+GROUP BY C.nro_cliente,TO_CHAR(C.numrun,'999G999G999')||'-'||C.dvrun,
+         C.pnombre,NVL(C.snombre,''),C.appaterno,C.apmaterno,TC.nombre_tipo_cliente;
+
+--CON CASE      
+/*V_PESOS_TODOSUMA := CASE
+                        WHEN (V_MONTO_SOLI_CLI < 1000000) AND (V_NOM_TIPO_CLI = 'Trabajadores independientes')
+                        THEN  ((TRUNC(V_MONTO_SOLI_CLI/100000)*1200)+(TRUNC(V_MONTO_SOLI_CLI/100000)*100))
+                        
+                        WHEN (V_MONTO_SOLI_CLI BETWEEN 1000001 AND 3000000) AND (V_NOM_TIPO_CLI = 'Trabajadores independientes')
+                        THEN  ((TRUNC(V_MONTO_SOLI_CLI/100000)*1200)+(TRUNC(V_MONTO_SOLI_CLI/100000)*300))
+                        
+                        WHEN (V_MONTO_SOLI_CLI > 30000000)  AND (V_NOM_TIPO_CLI = 'Trabajadores independientes')
+                        THEN  ((TRUNC(V_MONTO_SOLI_CLI/100000)*1200)+(TRUNC(V_MONTO_SOLI_CLI/100000)*550))
+                        
+                        ELSE 0
+                    END;*/
+
+-- CON IF
+
+IF (V_MONTO_SOLI_CLI < 1000000) AND (V_NOM_TIPO_CLI = 'Trabajadores independientes') THEN  
+     V_PESOS_TODOSUMA :=((TRUNC(V_MONTO_SOLI_CLI/100000)*1200)+(TRUNC(V_MONTO_SOLI_CLI/100000)*100));
+                        
+    ELSIF (V_MONTO_SOLI_CLI BETWEEN 1000001 AND 3000000) AND (V_NOM_TIPO_CLI = 'Trabajadores independientes') THEN  
+            V_PESOS_TODOSUMA := ((TRUNC(V_MONTO_SOLI_CLI/100000)*1200)+(TRUNC(V_MONTO_SOLI_CLI/100000)*300));
+                        
+        ELSIF (V_MONTO_SOLI_CLI > 3000000) AND (V_NOM_TIPO_CLI = 'Trabajadores independientes') THEN  
+                V_PESOS_TODOSUMA :=((TRUNC(V_MONTO_SOLI_CLI/100000)*1200)+(TRUNC(V_MONTO_SOLI_CLI/100000)*550));
+                        
+                        ELSE V_PESOS_TODOSUMA := (TRUNC(V_MONTO_SOLI_CLI/100000)*1200);
+                    
+                    END IF;
+                    
+DELETE CLIENTE_TODOSUMA WHERE nro_cliente = V_NRO_CLI;
+
+INSERT INTO CLIENTE_TODOSUMA VALUES(V_NRO_CLI,V_RUN_CLI,V_NOMBRE_CLI,V_NOM_TIPO_CLI,
+                                    V_MONTO_SOLI_CLI,V_PESOS_TODOSUMA);                             
+--COMMIT;
+END;  
+/
+SELECT * FROM CLIENTE_TODOSUMA;
+
+
+
+---------------------------------------------------------------------------CASO2
+SELECT * FROM CLIENTE;
+SELECT * FROM PROFESION_OFICIO;
+SELECT * FROM PRODUCTO_INVERSION_CLIENTE;
+SELECT * FROM PRODUCTO_INVERSION;
+SELECT * FROM MOVIMIENTO;
+SELECT * FROM TIPO_MOVIMIENTO;
+
+--------------NRO_CLIENTE A EJECUTAR
+--109
+--86
+--110
+--19
+--105
+/
+DECLARE
+
+V_FECHA NUMBER(2) := (EXTRACT(MONTH FROM SYSDATE)-1);
+V_NRO_CLI CLIENTE.NRO_CLIENTE%TYPE;
+V_RUN_CLI VARCHAR(15);
+V_NOMBRE_CLI VARCHAR2(100);
+V_PROFESION_CLI PROFESION_OFICIO.NOMBRE_PROF_OFIC%TYPE;
+V_MES_CUMPLE_CLI NUMBER(2);
+V_CUMPLE_CLI VARCHAR2 (20);
+V_TOTAL_AHO_CLI PRODUCTO_INVERSION_CLIENTE.MONTO_TOTAL_AHORRADO%TYPE;
+V_MONTO_GIFTCARD NUMBER(10);
+V_OBSERVACION VARCHAR2(60);
+
+BEGIN
+
+SELECT
+    C.nro_cliente "NRO_CLIENTE",
+    TO_CHAR(C.numrun,'999G999G999')||'-'||C.dvrun "RUT",
+    INITCAP(C.pnombre||' '||NVL(C.snombre,'')||
+    ' '||C.appaterno||' '||C.apmaterno) "NOMBRE_CLIENTE",
+    PO.nombre_prof_ofic "PROFESION_OFICIO",
+    EXTRACT(MONTH FROM C.fecha_nacimiento) "MES_CUMPLE",
+    TO_CHAR( C.fecha_nacimiento,'DD')||' de '||TRIM(TO_CHAR(C.fecha_nacimiento,'Month')) "DIA_CUMPLEANHOS",
+    SUM(PIC.monto_total_ahorrado) "MONTO AHORRADO"
+    INTO V_NRO_CLI,V_RUN_CLI,V_NOMBRE_CLI,V_PROFESION_CLI,
+         V_MES_CUMPLE_CLI,V_CUMPLE_CLI,V_TOTAL_AHO_CLI
+FROM CLIENTE C JOIN PROFESION_OFICIO PO
+ON C.cod_prof_ofic = PO.cod_prof_ofic
+AND C.nro_cliente = &INGRESE_NRO_CLIENTE
+LEFT JOIN PRODUCTO_INVERSION_CLIENTE PIC
+ON C.nro_cliente = PIC.nro_cliente
+GROUP BY C.nro_cliente,C.numrun,C.dvrun,C.pnombre,NVL(C.snombre,''),
+         C.appaterno,C.apmaterno,PO.nombre_prof_ofic,
+         C.fecha_nacimiento;
+
+V_MONTO_GIFTCARD := CASE
+                        WHEN V_TOTAL_AHO_CLI BETWEEN 0 AND 900000 
+                            THEN 0
+                        WHEN V_TOTAL_AHO_CLI BETWEEN 900001 AND 2000000
+                            THEN 50000
+                        WHEN V_TOTAL_AHO_CLI BETWEEN 2000001 AND 5000000
+                            THEN 100000
+                        WHEN V_TOTAL_AHO_CLI BETWEEN 5000001 AND 8000000
+                            THEN 200000
+                        WHEN V_TOTAL_AHO_CLI BETWEEN 8000001 AND 15000000
+                            THEN 300000
+                        ELSE NULL
+                    END;
+V_OBSERVACION := CASE
+                    WHEN V_MES_CUMPLE_CLI <> V_FECHA+1 
+                         THEN 'El cliente no está de cumpleaños en el mes procesado'
+                    ELSE NULL
+                 END;
+                 
+/*DBMS_OUTPUT.PUT_LINE(V_NRO_CLI||'   '||V_RUN_CLI||'   '||V_NOMBRE_CLI||'   '||V_PROFESION_CLI
+                     ||'   '||V_CUMPLE_CLI||'   '||V_MONTO_GIFTCARD||'   '||V_OBSERVACION);*/
+DELETE FROM CUMPLEANNO_CLIENTE WHERE nro_cliente = V_NRO_CLI;
+                     
+INSERT INTO CUMPLEANNO_CLIENTE VALUES(V_NRO_CLI,V_RUN_CLI,V_NOMBRE_CLI,V_PROFESION_CLI,
+                                      V_CUMPLE_CLI,V_MONTO_GIFTCARD,V_OBSERVACION);               
+END;         
+
+
+
+/
+
+---------------------------------------------------------------------------CASO3
+
+SELECT * FROM CREDITO_CLIENTE;
+SELECT * FROM CUOTA_CREDITO_CLIENTE;
+SELECT * FROM CREDITO;
+
+/
+
+VAR B_NRO_CLI NUMBER
+EXEC :B_NRO_CLI := &NRO_CLIENTE;
+DECLARE
+V_CUOTAS_POSTERGAR NUMBER(3) := &CUOTAS_A_POSTERGAR;
+V_NRO_CLI CLIENTE.NRO_CLIENTE%TYPE;
+V_NRO_SOLIC_CREDI CREDITO_CLIENTE.NRO_SOLIC_CREDITO%TYPE;
+V_NRO_CUOTA CUOTA_CREDITO_CLIENTE.NRO_CUOTA%TYPE;
+V_FECHA_VENC_CUOTA CUOTA_CREDITO_CLIENTE.fecha_venc_cuota%TYPE;
+V_VALOR_CUOTA CUOTA_CREDITO_CLIENTE.valor_cuota%TYPE;
+V_FECHA_PAGO_CUOTA CUOTA_CREDITO_CLIENTE.fecha_pago_cuota%TYPE;
+V_MONTO_PAGADO CUOTA_CREDITO_CLIENTE.monto_pagado%TYPE;
+V_SALDO_POR_PAGAR CUOTA_CREDITO_CLIENTE.saldo_por_pagar%TYPE;
+V_COD_FORMA_PAGO CUOTA_CREDITO_CLIENTE.cod_forma_pago%TYPE;
+V_NOM_CREDITO CREDITO.nombre_credito%TYPE;
+V_INTERES NUMERIC(2,3);
+
+BEGIN
+
+SELECT
+    CC.nro_cliente "NRO_CLIENTE",
+    CC.nro_solic_credito "NRO_SOLIC_CREDITO",
+    CUC.nro_cuota "NRO_CUOTA",
+    CUC.fecha_venc_cuota "FECHA_VENC_CUOTA",
+    CUC.valor_cuota "VALOR_CUOTA",
+    CUC.fecha_pago_cuota "FECHA_PAGO_CUOTA",
+    CUC.monto_pagado "MONTO_PAGADO",
+    CUC.saldo_por_pagar "SALDO_POR_PAGAR",
+    CUC.cod_forma_pago "COD_FORMA_PAGO",
+    C.nombre_credito "COD_CREDITO"
+INTO V_NRO_CLI,V_NRO_SOLIC_CREDI,V_NRO_CUOTA,V_FECHA_VENC_CUOTA,V_VALOR_CUOTA,V_FECHA_PAGO_CUOTA,
+     V_MONTO_PAGADO,V_SALDO_POR_PAGAR,V_COD_FORMA_PAGO,V_NOM_CREDITO
+FROM CREDITO_CLIENTE CC JOIN CREDITO C
+ON C.cod_credito = CC.cod_credito
+JOIN CUOTA_CREDITO_CLIENTE CUC
+ON CC.nro_solic_credito = CUC.nro_solic_credito
+AND CC.NRO_CLIENTE = :B_NRO_CLI;
+
+
+V_INTERES :=  CASE
+                WHEN C.nombre_credito = 'Crédito Hipotecario' AND V_CUOTAS_POSTERGAR = 1  
+                    THEN 1
+                WHEN C.nombre_credito = 'Crédito Hipotecario' AND V_CUOTAS_POSTERGAR = 2
+                    THEN 0.005
+                WHEN C.nombre_credito = 'Crédito de Consumo' AND V_CUOTAS_POSTERGAR = 1
+                    THEN 0.01
+                WHEN C.nombre_credito = 'Crédito Automotriz' AND V_CUOTAS_POSTERGAR = 1
+                    THEN 0.02
+              END;
+--IF 
+                    
+END;
+
+
+
