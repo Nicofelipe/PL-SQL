@@ -1,0 +1,444 @@
+
+
+----------------------------------CASO 1----------------------------------------
+
+
+--AGREGANDO DATOS EN LA BASE DE DATOS CLOUD
+
+
+----------------------USUARIO ADMIN
+----------CREDENCIAL
+
+BEGIN
+  DBMS_CLOUD.CREATE_CREDENTIAL(
+  credential_name=>'CRED_BLOB',
+  username=>'USUARIO ORACLE CLOUD', 
+  PASSWORD=>'TOKEN QUE SE CREO EN LA NUBE'); 
+END;
+
+/
+----------CREANDO DIRECTORIO
+
+CREATE OR REPLACE DIRECTORY DIR_OBJETOS_LOB AS 'DIR_OBJETOS_LOB';
+GRANT READ,WRITE ON DIRECTORY DIR_OBJETOS_LOB TO MDY3131_P5;
+
+-- CONSULTA A DIRECTORIO CREANDO (ADMIN)
+SELECT *
+  FROM DBMS_CLOUD.LIST_FILES('DIR_OBJETOS_LOB');
+  
+  
+--------------------------------------------------------------------------------
+/*HACER QUE DESDE EL OBJETO DIRECTORIO CREADO EN LA BBDDD SE PUEDE LEER LOS ARCHIVOS
+ALMACENADOS EN LA NUBE*/
+
+
+-- IMAGEN USUARIO 1
+BEGIN
+  DBMS_CLOUD.GET_OBJECT(
+  credential_name=>'CRED_BLOB',
+  object_uri=>'URL QUE SALE AL SELECCIONAR 'Create Pre-Authenticated Request? EN ORACLE CLOUD ',
+  directory_name=>'DIR_OBJETOS_LOB');
+END;
+/
+
+-- IMAGEN USUARIO 118
+BEGIN
+  DBMS_CLOUD.GET_OBJECT(
+  credential_name=>'CRED_BLOB',
+  object_uri=>'URL QUE SALE AL SELECCIONAR 'Create Pre-Authenticated Request? EN ORACLE CLOUD ',
+  directory_name=>'DIR_OBJETOS_LOB');
+END;
+/
+
+-- IMAGEN USUARIO 125
+BEGIN
+  DBMS_CLOUD.GET_OBJECT(
+  credential_name=>'CRED_BLOB',
+  object_uri=>'URL QUE SALE AL SELECCIONAR 'Create Pre-Authenticated Request? EN ORACLE CLOUD ',
+  directory_name=>'DIR_OBJETOS_LOB');
+END;
+/
+
+-- IMAGEN USUARIO 130
+BEGIN
+  DBMS_CLOUD.GET_OBJECT(
+  credential_name=>'CRED_BLOB',
+  object_uri=>'URL QUE SALE AL SELECCIONAR 'Create Pre-Authenticated Request? EN ORACLE CLOUD ',
+  directory_name=>'DIR_OBJETOS_LOB');
+END;
+/
+
+-- IMAGEN USUARIO 15
+BEGIN
+  DBMS_CLOUD.GET_OBJECT(
+  credential_name=>'CRED_BLOB',
+  object_uri=>'URL QUE SALE AL SELECCIONAR 'Create Pre-Authenticated Request? EN ORACLE CLOUD ',
+  directory_name=>'DIR_OBJETOS_LOB');
+END;
+/
+
+-- IMAGEN USUARIO 2
+BEGIN
+  DBMS_CLOUD.GET_OBJECT(
+  credential_name=>'CRED_BLOB',
+  object_uri=>'URL QUE SALE AL SELECCIONAR 'Create Pre-Authenticated Request? EN ORACLE CLOUD ',
+  directory_name=>'DIR_OBJETOS_LOB');
+END;
+/
+
+-- IMAGEN USUARIO 37
+BEGIN
+  DBMS_CLOUD.GET_OBJECT(
+  credential_name=>'CRED_BLOB',
+  object_uri=>'URL QUE SALE AL SELECCIONAR 'Create Pre-Authenticated Request? EN ORACLE CLOUD ',
+  directory_name=>'DIR_OBJETOS_LOB');
+END;
+/
+
+-- IMAGEN USUARIO 44
+BEGIN
+  DBMS_CLOUD.GET_OBJECT(
+  credential_name=>'CRED_BLOB',
+  object_uri=>'URL QUE SALE AL SELECCIONAR 'Create Pre-Authenticated Request? EN ORACLE CLOUD ',
+  directory_name=>'DIR_OBJETOS_LOB');
+END;
+/
+
+-- IMAGEN USUARIO 46
+BEGIN
+  DBMS_CLOUD.GET_OBJECT(
+  credential_name=>'CRED_BLOB',
+  object_uri=>'URL QUE SALE AL SELECCIONAR 'Create Pre-Authenticated Request? EN ORACLE CLOUD ',
+  directory_name=>'DIR_OBJETOS_LOB');
+END;
+/
+
+-- IMAGEN USUARIO 8
+BEGIN
+  DBMS_CLOUD.GET_OBJECT(
+  credential_name=>'CRED_BLOB',
+  object_uri=>'URL QUE SALE AL SELECCIONAR 'Create Pre-Authenticated Request? EN ORACLE CLOUD ',
+  directory_name=>'DIR_OBJETOS_LOB');
+END;
+/
+
+-- IMAGEN USUARIO 91
+BEGIN
+  DBMS_CLOUD.GET_OBJECT(
+  credential_name=>'CRED_BLOB',
+  object_uri=>'URL QUE SALE AL SELECCIONAR 'Create Pre-Authenticated Request? EN ORACLE CLOUD ',
+  directory_name=>'DIR_OBJETOS_LOB');
+END;
+/
+
+
+
+
+--------------------------------------------------------------------------------
+--USUARIO MDY3131_P5
+
+--------------------ACTUALIZANDO BLOB
+
+DECLARE
+v_blob BLOB;
+v_bfile BFILE;
+v_no_existe_archivo NUMBER(2);
+v_directorio VARCHAR2(20);
+v_foto VARCHAR2(20);
+v_min_cod_c NUMBER(5);
+v_max_cod_c NUMBER(5);
+reg_cliente CLIENTE%ROWTYPE;
+BEGIN
+   SELECT 
+        MIN(nro_cliente),
+        MAX(nro_cliente)
+        INTO v_min_cod_c, v_max_cod_c
+   FROM CLIENTE;
+   FOR i IN v_min_cod_c .. v_max_cod_c
+     LOOP
+         SELECT
+            * 
+         INTO reg_cliente
+         FROM CLIENTE
+         WHERE nro_cliente=i FOR UPDATE;
+         
+v_blob:= reg_cliente.foto;
+v_foto:= reg_cliente.nro_cliente || '.jpg';
+v_bfile:= BFILENAME ('DIR_OBJETOS_LOB',v_foto);
+
+       BEGIN
+       DBMS_LOB.FILEOPEN(v_bfile, DBMS_LOB.FILE_READONLY);
+       DBMS_LOB.LOADFROMFILE(v_blob,v_bfile, DBMS_LOB.GETLENGTH(v_bfile));
+       DBMS_LOB.FILECLOSE(v_bfile);
+       COMMIT;
+       EXCEPTION 
+       WHEN OTHERS THEN
+          v_no_existe_archivo:=1;
+        END;
+   END LOOP;
+END;
+
+/
+
+-------CONSULTANDO DATOS DE LA TABLA
+
+SELECT * FROM CLIENTE ORDER BY 1;
+
+-------CONSULTANDO DATOS DE LA TABLA FILTRANDO POR LAS IMAGENES DEL EJEMPLO
+SELECT * FROM CLIENTE WHERE NRO_CLIENTE = 1;
+SELECT * FROM CLIENTE WHERE NRO_CLIENTE = 15;
+SELECT * FROM CLIENTE WHERE NRO_CLIENTE = 37;
+SELECT * FROM CLIENTE WHERE NRO_CLIENTE = 118;
+
+
+
+
+
+----------------------------------CASO 2----------------------------------------
+ 
+DECLARE
+
+v_min_nro_cli CLIENTE.NRO_CLIENTE%TYPE;
+v_max_nro_cli CLIENTE.NRO_CLIENTE%TYPE;
+v_puntos_fijo NUMBER(8);
+v_puntos_adicional NUMBER(8);
+v_puntos_total NUMBER(8);
+
+TYPE tipo_varray_pesos IS VARRAY(5)
+    OF NUMBER(4);
+
+varray_pesos  tipo_varray_pesos;
+
+BEGIN
+    
+    EXECUTE IMMEDIATE('TRUNCATE TABLE CLIENTE_TODOSUMA');
+
+---ENTREGANDO VALORES AL VARRAY  
+    varray_pesos:= tipo_varray_pesos(1200,100,300,550,700);
+    
+--REGISTRO IMPLICITO
+     FOR REG_CLIENTE IN (SELECT
+                             C.nro_cliente "NRO_CLIENTE",
+                             TO_CHAR(C.numrun,'99G999G999')||'-'||C.dvrun "RUN_CLIENTE",
+                             C.pnombre||' '||C.snombre||' '||C.appaterno||' '||C.apmaterno "NOMBRE_CLIENTE",
+                             TC.nombre_tipo_cliente "TIPO_CLIENTE",
+                             SUM(CC.monto_solicitado) "MONTO_SOLICITADO_CREDITOS"
+                         FROM CLIENTE C JOIN TIPO_CLIENTE TC
+                         ON C.cod_tipo_cliente = TC.cod_tipo_cliente
+                         JOIN CREDITO_CLIENTE CC
+                         ON C.nro_cliente = CC.nro_cliente
+                         AND EXTRACT(YEAR FROM CC.fecha_solic_cred) = EXTRACT(YEAR FROM SYSDATE)-1
+                         GROUP BY C.nro_cliente,C.numrun,C.dvrun,C.pnombre,
+                                  C.snombre,C.appaterno,C.apmaterno,TC.nombre_tipo_cliente
+                                  ORDER BY 1)
+    LOOP
+
+---CALCULO PUNTOS TODO SUMA PARA TODOS LOS CLIENTES  
+    v_puntos_fijo := TRUNC(REG_CLIENTE.MONTO_SOLICITADO_CREDITOS/100000)*(varray_pesos(1));
+ 
+ ---CALCULO PUNTOS TODO SUMA PARA CLIENTES INDEPENDIENTES SEGUN TRAMO DE MONTO SOLICITADO   
+    IF(REG_CLIENTE.TIPO_CLIENTE = 'Trabajadores independientes' 
+        AND  (REG_CLIENTE.MONTO_SOLICITADO_CREDITOS BETWEEN 1000001 AND 3000000)) THEN
+            v_puntos_adicional := TRUNC(REG_CLIENTE.MONTO_SOLICITADO_CREDITOS/100000)*(varray_pesos(3));
+    ELSIF(REG_CLIENTE.TIPO_CLIENTE = 'Trabajadores independientes' 
+        AND  (REG_CLIENTE.MONTO_SOLICITADO_CREDITOS BETWEEN 3000001 AND 6000000)) THEN
+            v_puntos_adicional := TRUNC(REG_CLIENTE.MONTO_SOLICITADO_CREDITOS/100000)*(varray_pesos(4));
+    ELSIF(REG_CLIENTE.TIPO_CLIENTE = 'Trabajadores independientes' 
+        AND  (REG_CLIENTE.MONTO_SOLICITADO_CREDITOS > 6000001)) THEN
+            v_puntos_adicional := TRUNC(REG_CLIENTE.MONTO_SOLICITADO_CREDITOS/100000)*(varray_pesos(5));
+    ELSE 
+        v_puntos_adicional := 0;
+    END IF;
+    
+    v_puntos_total := v_puntos_fijo+v_puntos_adicional;
+ 
+--INSERTANDO DATOS A LA TABLA CLIENTE_TODOSUMA   
+    INSERT INTO CLIENTE_TODOSUMA VALUES(REG_CLIENTE.NRO_CLIENTE,REG_CLIENTE.RUN_CLIENTE,
+                                       REG_CLIENTE.NOMBRE_CLIENTE,REG_CLIENTE.TIPO_CLIENTE,
+                                       REG_CLIENTE.MONTO_SOLICITADO_CREDITOS,v_puntos_total);
+    
+    
+    
+----MOSTRANDO RESULTADOS EN LA CONSOLA DMBS   
+    /*DBMS_OUTPUT.PUT_LINE(REG_CLIENTE.NRO_CLIENTE||'    '||REG_CLIENTE.RUN_CLIENTE||'    '||
+                         REG_CLIENTE.NOMBRE_CLIENTE||'    '||REG_CLIENTE.TIPO_CLIENTE||'    '||
+                         REG_CLIENTE.MONTO_SOLICITADO_CREDITOS||'    '||v_puntos_total);*/
+    END LOOP;  
+    COMMIT;
+END;
+
+/
+
+-- CONSULTADO RESULTADO DEL BLOQUE
+SELECT * FROM CLIENTE_TODOSUMA;
+
+--TRUNCANDO TABLA
+TRUNCATE TABLE CLIENTE_TODOSUMA;
+
+
+
+
+
+
+
+----------------------------------CASO 3----------------------------------------
+
+
+
+----------------------------------------ELIMINANDO TABLA DE PRUEBA
+DROP TABLE EJEMPLO_CUOTA_CREDITO;
+
+----------------------------------------CREANDO TABLA DE PRUEBA                                                                                                                                                               
+CREATE TABLE EJEMPLO_CUOTA_CREDITO AS (SELECT                                             
+                                            * 
+                                    FROM CUOTA_CREDITO_CLIENTE);
+ ----------------------------------------CONSULTANDO TABLA DE PRUEBA                                   
+SELECT * FROM EJEMPLO_CUOTA_CREDITO ORDER BY 1,2;
+
+
+/
+DECLARE
+
+v_cuota_a_insertar EJEMPLO_CUOTA_CREDITO.VALOR_CUOTA%TYPE;
+v_cuota_ad EJEMPLO_CUOTA_CREDITO.VALOR_CUOTA%TYPE;
+
+TYPE tipo_varray_interes IS VARRAY(3)
+    OF NUMERIC(8,2);                        
+
+varray_interes  tipo_varray_interes;
+   
+BEGIN
+
+    varray_interes:= tipo_varray_interes(0.5,1,2);
+
+--PRIMER FOR CURSOR CON REGISTRO IMPLICITO
+    FOR REG_CREDITO IN (SELECT 
+                             CPC.nro_solic_credito AS NUM_SOLICRE,
+                             CPC.nro_cliente AS NUM_CLI,
+                             (SELECT
+                                COUNT(nro_cliente) 
+                             FROM CREDITO_CLIENTE
+                             WHERE nro_cliente = CPC.nro_cliente
+                             GROUP BY nro_cliente) AS CANTIDAD_CREDITOS,
+                             C.nombre_credito AS NOM_CREDITO,				/*SELECT QUE RESCATA SOLO A LOS CLIENTES QUE POSTERGAN CUOTA*/
+                             CPC.nro_cuotas_posterga AS CUOTAS_POSTERGA				
+                        FROM CREDITO_CLIENTE CC JOIN CLIENTE_POSTERGA_CUOTA CPC
+                        ON CC.nro_cliente = CPC.nro_cliente
+                        JOIN CREDITO C
+                        ON C.cod_credito = CC.cod_credito
+                        GROUP BY CPC.nro_solic_credito,CPC.nro_cliente,
+                                 C.nombre_credito, CPC.nro_cuotas_posterga) 
+                               
+    LOOP
+
+--SEGUNDO FOR CURSOR CON REGISTRO IMPLICITO
+    
+        FOR REG_CUOTA_CRED IN (SELECT
+                                    NRO_SOLIC_CREDITO AS NRO_SOLIC_CDTO,
+                                    nro_cuota AS NRO_MAX_CTA,
+                                    FECHA_VENC_CUOTA AS FECHA_VENC_CTA,
+                                    valor_cuota AS VALOR_MAX_CUO,					--SELECT QUE RESCATA LA FILA DE LA ULTIMA CUOTA
+                                    FECHA_PAGO_CUOTA AS FECHA_PAG_CTA,				--SEGUN EL NRO_SOLIC_CREDITO DEL FOR CURSOR ANTERIOR
+                                    MONTO_PAGADO AS MONTO_PAG,
+                                    SALDO_POR_PAGAR AS SALDO_A_PAG,
+                                    COD_FORMA_PAGO AS FORMA_PAG
+                                FROM EJEMPLO_CUOTA_CREDITO  ECC
+                                WHERE NRO_SOLIC_CREDITO = REG_CREDITO.NUM_SOLICRE
+                                GROUP BY NRO_CUOTA,NRO_SOLIC_CREDITO,FECHA_VENC_CUOTA,valor_cuota,FECHA_PAGO_CUOTA,MONTO_PAGADO,SALDO_POR_PAGAR,COD_FORMA_PAGO
+                                HAVING NRO_CUOTA = (SELECT
+                                                        MAX(nro_cuota)
+                                                    FROM EJEMPLO_CUOTA_CREDITO
+                                                    WHERE NRO_SOLIC_CREDITO = REG_CREDITO.NUM_SOLICRE))                      
+        LOOP
+         
+-------------------------ACTUALIZANDO
+
+--CONDONANDO LA ULTIMA CUOTA ORIGINAL SI EL CLIENTE POSEE 2 CREDITOS   
+        IF(REG_CREDITO.CANTIDAD_CREDITOS = 2) THEN
+            UPDATE  EJEMPLO_CUOTA_CREDITO 
+            SET fecha_pago_cuota = REG_CUOTA_CRED.FECHA_VENC_CTA
+            WHERE NRO_SOLIC_CREDITO = REG_CREDITO.NUM_SOLICRE                   
+            AND nro_cuota = REG_CUOTA_CRED.NRO_MAX_CTA;
+            
+            UPDATE  EJEMPLO_CUOTA_CREDITO 
+            SET MONTO_PAGADO = REG_CUOTA_CRED.VALOR_MAX_CUO
+            WHERE NRO_SOLIC_CREDITO = REG_CREDITO.NUM_SOLICRE                   
+            AND nro_cuota = REG_CUOTA_CRED.NRO_MAX_CTA;
+        END IF;
+
+
+
+-------------------------INSERTANDO
+
+--INSERTANDO FILAS SEGUN LA POSTERGACION DE CUOTAS          
+        IF(REG_CREDITO.NOM_CREDITO = 'Crédito Hipotecario' 
+            AND REG_CREDITO.CUOTAS_POSTERGA = 1) THEN
+            
+            v_cuota_ad := REG_CUOTA_CRED.VALOR_MAX_CUO;
+            v_cuota_a_insertar := REG_CUOTA_CRED.NRO_MAX_CTA+1;
+            
+        INSERT INTO EJEMPLO_CUOTA_CREDITO VALUES(REG_CREDITO.NUM_SOLICRE,
+                                                 v_cuota_a_insertar,
+                                                 ADD_MONTHS(REG_CUOTA_CRED.FECHA_VENC_CTA,1),
+                                                 v_cuota_ad,NULL,NULL,NULL,NULL);
+            
+        ELSIF(REG_CREDITO.NOM_CREDITO = 'Crédito Hipotecario' 
+             AND REG_CREDITO.CUOTAS_POSTERGA = 2) THEN
+             
+             v_cuota_ad := ROUND(REG_CUOTA_CRED.VALOR_MAX_CUO+(REG_CUOTA_CRED.VALOR_MAX_CUO*((varray_interes(1))/100)));
+
+             v_cuota_a_insertar := REG_CUOTA_CRED.NRO_MAX_CTA+1;
+             
+             INSERT INTO EJEMPLO_CUOTA_CREDITO VALUES(REG_CREDITO.NUM_SOLICRE,
+                                                      v_cuota_a_insertar,
+                                                      ADD_MONTHS(REG_CUOTA_CRED.FECHA_VENC_CTA,1),
+                                                      v_cuota_ad,NULL,NULL,NULL,NULL);
+                                                 
+             v_cuota_a_insertar := v_cuota_a_insertar+1;
+                                                 
+             INSERT INTO EJEMPLO_CUOTA_CREDITO VALUES(REG_CREDITO.NUM_SOLICRE,
+                                                      v_cuota_a_insertar,
+                                                      ADD_MONTHS(REG_CUOTA_CRED.FECHA_VENC_CTA,2),
+                                                      v_cuota_ad,NULL,NULL,NULL,NULL);
+               
+         
+         ELSIF(REG_CREDITO.NOM_CREDITO = 'Crédito de Consumo' 
+                AND REG_CREDITO.CUOTAS_POSTERGA = 1) THEN
+                
+                v_cuota_ad := ROUND(REG_CUOTA_CRED.VALOR_MAX_CUO+(REG_CUOTA_CRED.VALOR_MAX_CUO*(varray_interes(2)/100)));
+                
+                v_cuota_a_insertar := REG_CUOTA_CRED.NRO_MAX_CTA+1;
+            
+                INSERT INTO EJEMPLO_CUOTA_CREDITO VALUES(REG_CREDITO.NUM_SOLICRE,
+                                                         v_cuota_a_insertar,
+                                                         ADD_MONTHS(REG_CUOTA_CRED.FECHA_VENC_CTA,1),
+                                                         v_cuota_ad,NULL,NULL,NULL,NULL);
+       
+        ELSIF(REG_CREDITO.NOM_CREDITO = 'Crédito Automotriz' 
+                AND REG_CREDITO.CUOTAS_POSTERGA = 1) THEN
+                
+                v_cuota_ad := ROUND(REG_CUOTA_CRED.VALOR_MAX_CUO+(REG_CUOTA_CRED.VALOR_MAX_CUO*(varray_interes(3)/100)));
+                v_cuota_a_insertar := REG_CUOTA_CRED.NRO_MAX_CTA+1;
+                
+                
+                INSERT INTO EJEMPLO_CUOTA_CREDITO VALUES(REG_CREDITO.NUM_SOLICRE,
+                                                         v_cuota_a_insertar,
+                                                         ADD_MONTHS(REG_CUOTA_CRED.FECHA_VENC_CTA,1),
+                                                         v_cuota_ad,NULL,NULL,NULL,NULL);
+                                                     
+        END IF;
+            
+        END LOOP;
+    END LOOP;    
+ COMMIT;
+END;         
+/
+
+
+ ----------------------------------------CONSULTANDO TABLA DE PRUEBA                                   
+SELECT * FROM EJEMPLO_CUOTA_CREDITO ORDER BY 1,2;
+
+
+   
+    
+
