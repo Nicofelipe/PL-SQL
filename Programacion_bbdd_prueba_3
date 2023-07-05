@@ -43,7 +43,8 @@ BEGIN
 END TGR_ACT_CONSUMO_UPDATE;
 /
 
---Bloque para ejecutar trigger.
+
+---- Testing
 
 BEGIN
     INSERT INTO CONSUMO VALUES (11527,1587,340039,100);
@@ -54,16 +55,27 @@ BEGIN
     UPDATE CONSUMO SET monto = 80 WHERE id_consumo = 11214;
 
 END;
+
+
 /
 
+-- Consultando tablas (referencia de la guia)
 
+--No sabemos como ordenar estos resultados :c
+SELECT * FROM CONSUMO WHERE id_consumo IN (10417,10764,10901,10950,11153,
+                                           11214,11323,11362,11496,11507,10009,11527) ORDER BY 1;
+                                           
+SELECT * FROM TOTAL_CONSUMOS WHERE id_huesped IN (340036,340038,340039,340043);
+
+--Consultas por cada id_consumo que utilizamos una sentencia DML
+--Insertado
 SELECT * FROM CONSUMO WHERE id_consumo IN (11527);
+--Eliminado
 SELECT * FROM CONSUMO WHERE id_consumo IN (10417);
+--Modificados
 SELECT * FROM CONSUMO WHERE id_consumo IN (10901,11214);
 
-SELECT * FROM CONSUMO WHERE id_consumo IN (10417,10764,10901,10950,11153,
-                                           11214,11323,11362,11496,11507,10009,11527);
-SELECT * FROM TOTAL_CONSUMOS WHERE id_huesped IN (340036,340038,340039,340043);
+
 
 
 -----------------------------FIN CASO 1-----------------------------------------
@@ -73,6 +85,8 @@ SELECT * FROM TOTAL_CONSUMOS WHERE id_huesped IN (340036,340038,340039,340043);
 
 
 ------------------------------ CASO 2 ------------------------------------------
+
+
 
 -- Procedimiento para insertar errores
 CREATE OR REPLACE PROCEDURE PA_INSERTA_ERRORES ( p_programa  VARCHAR2, p_mensaje VARCHAR2 ) IS
@@ -218,6 +232,7 @@ END FN_AGENCIA;
 
 
 --Procedimiento principal
+
 CREATE OR REPLACE PROCEDURE SP_PRINCIPAL (p_fecha_proceso DATE, p_peso_a_dolar NUMBER) IS
 
 CURSOR c_huespedes IS SELECT
@@ -259,7 +274,7 @@ v_consumos_porc_peso NUMBER := 0;
 v_porc_agencia_peso NUMBER := 0;
 
 --Variable para insertar datos
-v_insert VARCHAR(1000) := 'HolaaaB:';
+v_insert VARCHAR(1000) := 'Holaaa B:';
 
 BEGIN
     
@@ -268,7 +283,7 @@ BEGIN
     
     FOR v_reg IN c_huespedes LOOP
         
-        --
+        --Variables para funciones
         v_tour := PKG_TOUR.FN_TOUR(v_reg.id_huesped);
         v_consumos := FN_CONSUMOS (v_reg.id_huesped);
         v_desc_consumos := FN_DESC_CONSUMOS (v_consumos);
@@ -321,15 +336,13 @@ END SP_PRINCIPAL;
 
 
 /
-
+-- Testing
 BEGIN
   SP_PRINCIPAL('18/08/2021', 840);
 END;
 
 /
-/*
+
+--Verificando resultados
 SELECT * FROM DETALLE_DIARIO_HUESPEDES;
 SELECT * FROM REG_ERRORES;
-*/
-message.txt
-11 KB
