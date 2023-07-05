@@ -1,0 +1,335 @@
+--Caso 1
+
+CREATE OR REPLACE TRIGGER TGR_ACT_CONSUMO_INS_DEL
+AFTER 
+INSERT OR DELETE ON CONSUMO
+FOR EACH ROW
+BEGIN
+    --Si insertamos un nuevo consumo
+    IF INSERTING THEN
+            UPDATE TOTAL_CONSUMOS SET monto_consumos = monto_consumos + :NEW.monto   
+            WHERE id_huesped = :NEW.id_huesped; 
+    --Si eliminamos una fila en la tabla consumo
+    ELSE
+        UPDATE TOTAL_CONSUMOS SET monto_consumos = monto_consumos - :OLD.monto  
+        WHERE id_huesped = :OLD.id_huesped; 
+    END IF;
+END TGR_ACT_CONSUMO_INS_DEL;
+
+/
+
+CREATE OR REPLACE TRIGGER TGR_ACT_CONSUMO_UPDATE
+BEFORE
+UPDATE OF monto ON CONSUMO
+FOR EACH ROW
+DECLARE 
+v_dif_si_es_mayor NUMBER := 0;
+v_dif_si_es_menor NUMBER := 0;
+BEGIN
+--Variable para ser usada si el nuevo monto es mayor al antiguo monto 
+    v_dif_si_es_mayor := :NEW.monto - :OLD.monto;
+--Variable para ser usada si el nuevo monto es menor al antiguo monto
+    v_dif_si_es_menor := :OLD.monto - :NEW.monto;
+
+    IF UPDATING THEN
+        IF :NEW.monto > :OLD.monto THEN
+            UPDATE TOTAL_CONSUMOS SET monto_consumos = monto_consumos + v_dif_si_es_mayor   
+            WHERE id_huesped = :NEW.id_huesped;
+               ELSIF :NEW.monto < :OLD.monto   THEN
+                    UPDATE TOTAL_CONSUMOS SET monto_consumos = monto_consumos - v_dif_si_es_menor    
+                    WHERE id_huesped = :NEW.id_huesped; 
+        END IF;
+    END IF;
+END TGR_ACT_CONSUMO_UPDATE;
+/
+
+--Bloque para ejecutar trigger.
+
+BEGIN
+    INSERT INTO CONSUMO VALUES (11527,1587,340039,100);
+    
+    DELETE FROM CONSUMO WHERE id_consumo = 10417;
+    
+    UPDATE CONSUMO SET monto = 56 WHERE id_consumo = 10901;
+    UPDATE CONSUMO SET monto = 80 WHERE id_consumo = 11214;
+
+END;
+/
+
+
+SELECT * FROM CONSUMO WHERE id_consumo IN (11527);
+SELECT * FROM CONSUMO WHERE id_consumo IN (10417);
+SELECT * FROM CONSUMO WHERE id_consumo IN (10901,11214);
+
+SELECT * FROM CONSUMO WHERE id_consumo IN (10417,10764,10901,10950,11153,
+                                           11214,11323,11362,11496,11507,10009,11527);
+SELECT * FROM TOTAL_CONSUMOS WHERE id_huesped IN (340036,340038,340039,340043);
+
+
+-----------------------------FIN CASO 1-----------------------------------------
+
+
+/
+
+
+------------------------------ CASO 2 ------------------------------------------
+
+-- Procedimiento para insertar errores
+CREATE OR REPLACE PROCEDURE PA_INSERTA_ERRORES ( p_programa  VARCHAR2, p_mensaje VARCHAR2 ) IS
+BEGIN
+   --SQL DINÁMICO 
+   EXECUTE IMMEDIATE 'INSERT INTO REG_ERRORES VALUES (sq_error.nextval,  :P1, :P2 )'
+   USING p_programa, p_mensaje ; 
+   COMMIT;
+END PA_INSERTA_ERRORES;
+
+/
+
+--Package
+
+CREATE OR REPLACE PACKAGE PKG_TOUR IS 
+    FUNCTION FN_TOUR(p_id NUMBER) RETURN NUMBER;
+END PKG_TOUR;
+
+
+/
+
+
+--Package body
+CREATE OR REPLACE PACKAGE BODY PKG_TOUR IS 
+    FUNCTION FN_TOUR(p_id NUMBER) RETURN NUMBER IS
+v_monto_tour NUMBER := 0;
+v_mensaje VARCHAR2(300) := 'Hola :)';
+
+    BEGIN
+        SELECT
+            SUM(NVL(valor_tour*num_personas,0))
+            INTO v_monto_tour
+        FROM HUESPED_TOUR 
+        NATURAL JOIN TOUR
+        WHERE id_huesped = p_id
+        GROUP BY id_huesped
+        ORDER BY id_huesped;
+        
+    RETURN v_monto_tour;
+    
+    EXCEPTION WHEN NO_DATA_FOUND THEN
+                    DBMS_OUTPUT.PUT_LINE('errorcito :)');
+                RETURN v_monto_tour;
+              WHEN OTHERS THEN
+                    v_mensaje := SQLERRM;
+                    PA_INSERTA_ERRORES('Error en la función FN_TOUR al recuperar el monto de total de tours en el id: '||p_id,v_mensaje);
+                RETURN v_monto_tour;
+    END;
+END PKG_TOUR;
+
+
+
+/
+
+
+
+--Función que retorna consumos con DYNAMIC SQL
+
+CREATE OR REPLACE FUNCTION FN_CONSUMOS (p_id NUMBER) RETURN NUMBER IS
+v_total_consumos NUMBER := 0;
+v_dinamic_sql VARCHAR2(1000);
+v_mensaje VARCHAR2(300) := 'Hola :)';
+BEGIN
+    --Obteniendo monto consumos del huesped con DYNAMIC SQL
+    v_dinamic_sql := 'SELECT
+                         monto_consumos
+                      FROM total_consumos
+                      WHERE id_huesped = :p_id';
+    EXECUTE IMMEDIATE v_dinamic_sql INTO v_total_consumos USING p_id;
+    
+RETURN v_total_consumos;
+
+EXCEPTION WHEN OTHERS THEN
+                v_mensaje := SQLERRM;
+                PA_INSERTA_ERRORES('Error en la función FN_CONSUMOS al recuperar los consumos del cliente con Id '||p_id,v_mensaje);
+            RETURN v_total_consumos;
+END FN_CONSUMOS;
+
+
+
+/
+
+
+
+--Función descuento por consumos
+
+CREATE OR REPLACE FUNCTION FN_DESC_CONSUMOS (p_consumos NUMBER) RETURN NUMBER IS
+v_desc_consumos TRAMOS_CONSUMOS.pct%TYPE := 0;
+v_mensaje VARCHAR2(300) := 'Hola :)';
+BEGIN
+    --Obteniendo porcentaje 
+    SELECT
+         PCT
+         INTO v_desc_consumos
+    FROM TRAMOS_CONSUMOS
+    WHERE p_consumos BETWEEN vmin_tramo AND vmax_tramo;
+    
+RETURN v_desc_consumos;
+
+EXCEPTION WHEN OTHERS THEN
+                v_mensaje := SQLERRM;
+                PA_INSERTA_ERRORES('Error en la función FN_DESC_CONSUMOS al recuperar porcentaje de consumos del cliente',v_mensaje);
+            RETURN v_desc_consumos;
+END FN_DESC_CONSUMOS;
+
+
+
+
+/
+
+
+
+
+
+--Función agencia
+
+CREATE OR REPLACE FUNCTION FN_AGENCIA (p_agencia NUMBER, p_id NUMBER) RETURN VARCHAR2 IS
+v_dinamic_sql VARCHAR2(1000) := 'Hola :B';
+v_nom_agencia AGENCIA.nom_agencia%TYPE := 'NO REGISTRA AGENCIA';
+v_mensaje VARCHAR2(300) := 'Hola :)';
+
+BEGIN
+    --Obteniendo el nombre de la agencia del cliente con DYNAMIC SQL
+    v_dinamic_sql := 'SELECT
+                        nom_agencia
+                    FROM AGENCIA
+                    WHERE id_agencia = :p_agencia';
+    EXECUTE IMMEDIATE v_dinamic_sql INTO v_nom_agencia USING p_agencia;
+
+RETURN v_nom_agencia;
+
+EXCEPTION WHEN OTHERS THEN
+                v_mensaje := SQLERRM;
+                PA_INSERTA_ERRORES('Error en la función FN_AGENCIA al recuperar los consumos del cliente con Id '||p_id,v_mensaje);
+            RETURN v_nom_agencia;
+    
+END FN_AGENCIA;
+
+
+
+/
+
+
+
+--Procedimiento principal
+CREATE OR REPLACE PROCEDURE SP_PRINCIPAL (p_fecha_proceso DATE, p_peso_a_dolar NUMBER) IS
+
+CURSOR c_huespedes IS SELECT
+                          HU.id_huesped,
+                          UPPER(HU.appat_huesped||' '||HU.apmat_huesped||' '||HU.nom_huesped) AS nombre_huesped,
+                          NVL(HU.id_agencia,0) AS id_ag,
+                          SUM(valor_habitacion + valor_minibar) AS valor_dia,
+                          RE.estadia
+                      FROM HUESPED HU JOIN RESERVA RE
+                      ON RE.id_huesped = HU.id_huesped
+                      JOIN DETALLE_RESERVA DERE
+                      ON DERE.id_reserva = RE.id_reserva
+                      JOIN HABITACION HB
+                      ON DERE.id_habitacion = HB.id_habitacion
+                      WHERE EXTRACT(DAY FROM ingreso) = EXTRACT(DAY FROM p_fecha_proceso) - RE.estadia
+                      AND EXTRACT(MONTH FROM ingreso) = EXTRACT(MONTH FROM p_fecha_proceso)
+                      AND EXTRACT(YEAR FROM ingreso) = EXTRACT(YEAR FROM p_fecha_proceso)
+                      GROUP BY HU.id_huesped, HU.appat_huesped, HU.apmat_huesped, HU.nom_huesped,HU.id_agencia,estadia
+                      ORDER BY HU.id_huesped;
+
+
+v_agencia AGENCIA.nom_agencia%TYPE := ':)';
+v_tour NUMBER :=0;
+v_consumos NUMBER := 0; 
+v_desc_consumos NUMBER := 0;
+v_pago_estadia NUMBER := 0;
+v_consumos_porc NUMBER := 0;
+v_monto_acumulado NUMBER := 0;
+v_porc_agencia NUMBER := 0;
+v_total NUMBER := 0;
+v_mensaje VARCHAR2(300):= 'Hola';
+
+--Variables pasadas a peso
+v_pago_estadia_peso NUMBER := 0;
+v_consumos_peso NUMBER := 0;
+v_tour_peso NUMBER := 0;
+v_monto_acumulado_peso NUMBER := 0;
+v_consumos_porc_peso NUMBER := 0;
+v_porc_agencia_peso NUMBER := 0;
+
+--Variable para insertar datos
+v_insert VARCHAR(1000) := 'HolaaaB:';
+
+BEGIN
+    
+    EXECUTE IMMEDIATE ('TRUNCATE TABLE REG_ERRORES');
+    EXECUTE IMMEDIATE ('TRUNCATE TABLE DETALLE_DIARIO_HUESPEDES');
+    
+    FOR v_reg IN c_huespedes LOOP
+        
+        --
+        v_tour := PKG_TOUR.FN_TOUR(v_reg.id_huesped);
+        v_consumos := FN_CONSUMOS (v_reg.id_huesped);
+        v_desc_consumos := FN_DESC_CONSUMOS (v_consumos);
+        v_agencia := UPPER(FN_AGENCIA (v_reg.id_ag, v_reg.id_huesped));
+        
+        v_pago_estadia := v_reg.valor_dia * v_reg.estadia;
+        
+        v_consumos_porc := ROUND(v_consumos * v_desc_consumos);
+
+        v_monto_acumulado := v_pago_estadia + v_consumos + v_tour;
+        
+        IF v_agencia = 'VIAJES ALBERTI' THEN
+            v_porc_agencia := ROUND(v_monto_acumulado *  0.1);
+            ELSIF v_agencia = 'VIAJES ENIGMA' THEN
+                    v_porc_agencia := ROUND(v_monto_acumulado *  0.2);
+                ELSE
+                    v_porc_agencia := 0;
+        END IF;
+        
+        v_total := (v_monto_acumulado - (v_consumos_porc + v_porc_agencia)) * p_peso_a_dolar; 
+        v_pago_estadia_peso := v_pago_estadia*p_peso_a_dolar;
+        v_consumos_peso := v_consumos*p_peso_a_dolar;
+        v_tour_peso := v_tour*p_peso_a_dolar;
+        v_monto_acumulado_peso := v_monto_acumulado*p_peso_a_dolar;
+        v_consumos_porc_peso := v_consumos_porc*p_peso_a_dolar;
+        v_porc_agencia_peso := v_porc_agencia*p_peso_a_dolar;
+        
+        BEGIN 
+        
+            v_insert := 'INSERT INTO DETALLE_DIARIO_HUESPEDES VALUES (:1, :2, :3, :4, :5, :6, :7, :8, :9, :10)';
+            
+            --Insertando datos DYNAMYC SQL
+            EXECUTE IMMEDIATE v_insert USING  v_reg.id_huesped, v_reg.nombre_huesped, v_agencia,
+                                              v_pago_estadia_peso, v_consumos_peso, v_tour_peso,
+                                              v_monto_acumulado_peso, v_consumos_porc_peso,
+                                              v_porc_agencia_peso, v_total;
+            
+        
+            v_mensaje := 'hola';
+            EXCEPTION WHEN OTHERS THEN
+                    v_mensaje := SQLERRM;
+                    PA_INSERTA_ERRORES('Error en la función SP_PRINCIPAL. al insertar datos de los huespedes'||v_reg.id_huesped,v_mensaje);
+        END;
+    END LOOP;
+    EXCEPTION WHEN OTHERS THEN
+            v_mensaje := SQLERRM;
+            PA_INSERTA_ERRORES('Error en la función SP_PRINCIPAL al recuperar los datos de los huespedes ',v_mensaje);
+END SP_PRINCIPAL;
+
+
+
+/
+
+BEGIN
+  SP_PRINCIPAL('18/08/2021', 840);
+END;
+
+/
+/*
+SELECT * FROM DETALLE_DIARIO_HUESPEDES;
+SELECT * FROM REG_ERRORES;
+*/
+message.txt
+11 KB
